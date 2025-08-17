@@ -8,29 +8,45 @@ import (
 	"os"
 )
 
+func getLinesChannel(file io.ReadCloser) <-chan string {
+	ch := make(chan string)
+
+	go func() {
+		defer file.Close()
+		defer close(ch)
+
+		var line []byte
+		for {
+			data := make([]byte, 8)
+			_, err := file.Read(data)
+			if err == io.EOF {
+				break
+			} else if err != nil {
+				log.Fatal("failed to read data: ", err)
+			}
+
+			parts := bytes.Split(data, []byte("\n"))
+			for idx := range parts {
+				line = append(line, parts[idx]...)
+				if len(parts[idx:]) > 1 {
+					ch <- string(line)
+					line = nil
+				}
+			}
+		}
+	}()
+
+	return ch
+}
+
 func main() {
 	file, err := os.Open("messages.txt")
 	if err != nil {
-		log.Fatal("failed to open file:", err)
+		log.Fatal("failed to open file: ", err)
 	}
 
-	var line []byte
-	for {
-		data := make([]byte, 8)
-		_, err := file.Read(data)
-		if err == io.EOF {
-			break
-		} else if err != nil {
-			log.Fatal("failed to read data:", err)
-		}
-
-		parts := bytes.Split(data, []byte("\n"))
-		for idx := range parts {
-			line = append(line, parts[idx]...)
-			if len(parts[idx:]) > 1 {
-				fmt.Println("read:", string(line))
-				line = nil
-			}
-		}
+	ch := getLinesChannel(file)
+	for line := range ch {
+		fmt.Println("read:", line)
 	}
 }
