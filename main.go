@@ -9,11 +9,11 @@ import (
 )
 
 func getLinesChannel(file io.ReadCloser) <-chan string {
-	ch := make(chan string)
+	out := make(chan string)
 
 	go func() {
 		defer file.Close()
-		defer close(ch)
+		defer close(out)
 
 		var line []byte
 		for {
@@ -29,14 +29,14 @@ func getLinesChannel(file io.ReadCloser) <-chan string {
 			for idx := range parts {
 				line = append(line, parts[idx]...)
 				if len(parts[idx:]) > 1 {
-					ch <- string(line)
+					out <- string(line)
 					line = nil
 				}
 			}
 		}
 	}()
 
-	return ch
+	return out
 }
 
 func main() {
@@ -45,8 +45,8 @@ func main() {
 		log.Fatal("failed to open file: ", err)
 	}
 
-	ch := getLinesChannel(file)
-	for line := range ch {
+	lines := getLinesChannel(file)
+	for line := range lines {
 		fmt.Println("read:", line)
 	}
 }
