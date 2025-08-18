@@ -8,8 +8,7 @@ import (
 	"strings"
 )
 
-var newLine = []byte("\r\n")
-
+const crlf = "\r\n"
 const (
 	stateInit int = iota
 	stateDone
@@ -46,24 +45,28 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 		state: stateInit,
 	}
 
-	var buf bytes.Buffer
+	data := make([]byte, 8)
+	var unparsed bytes.Buffer
 	for request.state != stateDone {
-		data := make([]byte, 8)
-		m, err := reader.Read(data)
-		if err != nil {
+		n, err := reader.Read(data)
+		if err == io.EOF {
+			request.state = stateDone
+			break
+		} else if err != nil {
 			return nil, fmt.Errorf("failed to read from reader: %w", err)
 		}
-		buf.Write(data[:m])
+		if n > 0 {
+			unparsed.Write(data[:n])
+		}
 
-		n, err := request.parse(buf.Bytes())
+		n, err = request.parse(unparsed.Bytes())
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse request: %w", err)
 		}
 		if n != 0 {
-			// buf.Next() for better perf, more memory
-			tmp := buf.Bytes()[n:]
-			buf.Reset()
-			buf.Write(tmp)
+			remaining := unparsed.Bytes()[n:]
+			unparsed.Reset()
+			unparsed.Write(remaining)
 		}
 	}
 
@@ -71,13 +74,13 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 }
 
 func parseRequestLine(data []byte) (*RequestLine, int, error) {
-	idx := bytes.Index(data, newLine)
+	idx := bytes.Index(data, []byte(crlf))
 	if idx == -1 {
 		return nil, 0, nil
 	}
 
 	parts := strings.Split(string(data[:idx]), " ")
-	idx += len(newLine)
+	idx += len(crlf)
 	if len(parts) != 3 {
 		return nil, idx, errors.New("malformed request line")
 	}
