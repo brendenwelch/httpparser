@@ -35,6 +35,9 @@ func getLinesChannel(stream io.ReadCloser) <-chan string {
 				}
 			}
 		}
+		if len(line) != 0 {
+			out <- string(line)
+		}
 	}()
 
 	return out
