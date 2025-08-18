@@ -48,10 +48,12 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 
 	var buf bytes.Buffer
 	for request.state != stateDone {
-		_, err := buf.ReadFrom(reader)
+		data := make([]byte, 8)
+		m, err := reader.Read(data)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read from reader: %w", err)
 		}
+		buf.Write(data[:m])
 
 		n, err := request.parse(buf.Bytes())
 		if err != nil {
