@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"os"
 )
 
 func getLinesChannel(stream io.ReadCloser) <-chan string {
@@ -39,8 +40,16 @@ func getLinesChannel(stream io.ReadCloser) <-chan string {
 	return out
 }
 
-func main() {
-	listener, err := net.Listen("tcp", "localhost:42069")
+func ReadFromFile(filepath string) {
+	file, _ := os.Open(filepath)
+	lines := getLinesChannel(file)
+	for line := range lines {
+		fmt.Println(line)
+	}
+}
+
+func ReadFromTCP(address string) {
+	listener, err := net.Listen("tcp", address)
 	if err != nil {
 		log.Fatal("failed to open tcp listener: ", err)
 	}
@@ -59,4 +68,8 @@ func main() {
 		}
 		fmt.Println("Connection closed")
 	}
+}
+
+func main() {
+	ReadFromTCP("localhost:42069")
 }
