@@ -57,8 +57,11 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse request: %w", err)
 		}
-		if n == 0 {
-			continue
+		if n != 0 {
+			// buf.Next() for better perf, more memory
+			tmp := buf.Bytes()[n:]
+			buf.Reset()
+			buf.Write(tmp)
 		}
 	}
 
