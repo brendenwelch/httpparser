@@ -41,7 +41,11 @@ func getLinesChannel(stream io.ReadCloser) <-chan string {
 }
 
 func ReadFromFile(filepath string) {
-	file, _ := os.Open(filepath)
+	file, err := os.Open(filepath)
+	if err != nil {
+		log.Fatal("failed to open file: ", err)
+	}
+
 	lines := getLinesChannel(file)
 	for line := range lines {
 		fmt.Println(line)
